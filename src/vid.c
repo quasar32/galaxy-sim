@@ -106,10 +106,11 @@ static void render(void) {
     ret = av_frame_get_buffer(frame, 0);
     if (ret < 0)
         die("av_frame_get_buffer: %s\n", av_err2str(ret));
-    for (pts = 0; pts < 10 * FPS; pts++) {
-        for (int i = 0; i < 10; i++) 
-            step_sim();
-        draw(WIDTH, HEIGHT);
+    for (pts = 0; pts < 60 * FPS; pts++) {
+        step_sim();
+        vec3 eye = {0.0f, 0.0f, 5.0f};
+        vec3 front = {0.0f, 0.0f, -1.0f};
+        draw(WIDTH, HEIGHT, eye, front);
         glReadPixels(0, 0, WIDTH, HEIGHT, GL_RGB, 
                 GL_UNSIGNED_BYTE, pixels); 
         ret = av_frame_make_writable(frame);

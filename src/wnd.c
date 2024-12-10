@@ -2,7 +2,7 @@
 #include "draw.h"
 #include "sim.h"
 
-#define FPS 20
+#define FPS 50 
 
 static vec3 eye = {0.0f, 0.0f, 5.0f};
 static vec3 front;
@@ -18,18 +18,8 @@ static int n_keys;
 static void update_rots(void) {
     int x, y;
     SDL_GetRelativeMouseState(&x, &y);
-    static int init, prev_x, prev_y;
-    if (!init) {
-        prev_x = x;
-        prev_y = y;
-        init = 1;
-    }
-    //yaw += (x - prev_x) * 0.001f;
-    //pitch += (prev_y - y) * 0.001f;
     yaw += x * 0.001f;
     pitch -= y * 0.001f;
-    prev_x = x;
-    prev_y = y;
     yaw = fmodf(yaw, GLM_PIf * 2.0F);
     pitch = fminf(fmaxf(pitch, MIN_PITCH), MAX_PITCH);
 }
