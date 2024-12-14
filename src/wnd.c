@@ -76,7 +76,6 @@ int main(void) {
             update_rots();
             update_dirs();
             update_eye();
-
             step_sim();
         }
     }

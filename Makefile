@@ -19,7 +19,8 @@ obj/test.o: src/test.c src/sim.h
 	gcc $< -o $@ -Ilib/cglm/include -c
 
 obj/sim.o: src/sim.c src/sim.h src/misc.h
-	gcc $< -o $@ -Ilib/cglm/include -c -O3 -fno-strict-aliasing 
+	gcc $< -o $@ -Ilib/cglm/include -c -O3 -fno-strict-aliasing -Wall -Wextra
+
 
 obj/misc.o: src/misc.c src/misc.h
 	gcc $< -o $@ -c

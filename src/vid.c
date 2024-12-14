@@ -47,6 +47,7 @@ static void render(void) {
     AVPacket *pkt;
     AVFrame *frame;
     int pts;
+    int i;
 
     sws = sws_getContext(WIDTH, HEIGHT, AV_PIX_FMT_RGB24,
         WIDTH, HEIGHT, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR,
@@ -106,8 +107,9 @@ static void render(void) {
     ret = av_frame_get_buffer(frame, 0);
     if (ret < 0)
         die("av_frame_get_buffer: %s\n", av_err2str(ret));
-    for (pts = 0; pts < 60 * FPS; pts++) {
-        step_sim();
+    for (pts = 0; pts < 10 * FPS; pts++) {
+        for (i = 0; i < 10; i++) 
+            step_sim();
         vec3 eye = {0.0f, 0.0f, 5.0f};
         vec3 front = {0.0f, 0.0f, -1.0f};
         draw(WIDTH, HEIGHT, eye, front);

@@ -11,8 +11,22 @@ void die(const char *fmt, ...) {
 }
 
 void *xmalloc(size_t size) {
-    void *data = malloc(size);
-    if (!data)
+    void *ptr= malloc(size);
+    if (!ptr)
         die("out of memory\n");
-    return data;
+    return ptr;
+}
+
+void *xrealloc(void *ptr, size_t size) {
+    ptr = realloc(ptr, size);
+    if (!ptr)
+        die("out of memory\n");
+    return ptr;
+}
+
+void *xcalloc(size_t nmemb, size_t size) {
+    void *ptr = calloc(nmemb, size);
+    if (!ptr)
+        die("out of memory\n");
+    return ptr;
 }
