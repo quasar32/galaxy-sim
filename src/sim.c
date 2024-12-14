@@ -145,7 +145,7 @@ static void calc_acc(struct octant *o, int s, float d) {
         add_acc(o, s);
     } else {
         float r2 = glm_vec3_distance2(sim.x[s], o->com);
-        if (d * d < r2 * 100000) {
+        if (d * d < r2 * 2.25f) {
             add_acc(o, s);
         } else {
             for (int i = 0; i < 8; i++) {
@@ -156,11 +156,12 @@ static void calc_acc(struct octant *o, int s, float d) {
     }
 }
 
-static void print_octant(struct octant *o, int lvl) {
-    printf("%d: %f, (%f %f %f)\n", lvl, o->mass, o->com[0], o->com[1], o->com[2]);
+static void octant_destroy(struct octant *o) {
     for (int i = 0; i < 8; i++) {
-        if (o->children[i])
-            print_octant(o->children[i], lvl + 1);
+        if (o->children[i]) {
+            octant_destroy(o->children[i]);
+            free(o->children[i]);
+        }
     }
 }
 
@@ -179,8 +180,6 @@ void step_sim(void) {
         vec3 max = {sim_max, sim_max, sim_max};
         octant_insert(&root, i, min, max);
     }
-    //print_octant(&root, 0);
-    //exit(0);
     for (int i = 0; i < sim.n; i++) {
         glm_vec3_zero(sim.a[i]);
         calc_acc(&root, i, sim_max - sim_min);
@@ -189,4 +188,5 @@ void step_sim(void) {
         glm_vec3_muladds(sim.a[i], sim.h, sim.v[i]);
         glm_vec3_muladds(sim.v[i], sim.h, sim.x[i]);
     }
+    octant_destroy(&root);
 }
