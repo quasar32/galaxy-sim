@@ -3,8 +3,15 @@
 #include "sim.h"
 #include "misc.h"
 #include <cglm/struct.h>
+#include <pthread.h>
+#include <sys/sysinfo.h>
+#include <string.h>
 
 struct sim sim;
+
+static int next_octant;
+static int max_octant;
+static struct octant *octants;
 
 void init_sim(void) {
     if (scanf("%d %f %f", &sim.n, &sim.h, &sim.e2) != 3) 
@@ -43,7 +50,7 @@ void init_sim(void) {
 }
 
 struct octant {
-    struct octant *children[8];
+    int children[8];
     float mass;
     vec3 com;
 }; 
@@ -78,19 +85,21 @@ static void descend_minmax(vec3 min, vec3 max, int index) {
 
 static int is_leaf(struct octant *oct) {
     for (int i = 0; i < 8; i++) {
-        if (oct->children[i])
+        if (oct->children[i] >= 0)
             return 0;
     }
     return 1;
 }
 
-static struct octant *create_octant(float mass, vec3 com) {
-    struct octant *oct = xmalloc(sizeof(*oct));
+static int create_octant(float mass, vec3 com) {
+    if (next_octant == max_octant)
+        die("too many octants\n");
+    struct octant *oct = &octants[next_octant];
     oct->mass = mass;
     glm_vec3_copy(com, oct->com);
     for (int i = 0; i < 8; i++)
-        oct->children[i] = NULL;
-    return oct;
+        oct->children[i] = -1;
+    return next_octant++;
 }
 
 static void octant_insert(struct octant *oct, int star, vec3 min, vec3 max) {
@@ -102,10 +111,10 @@ static void octant_insert(struct octant *oct, int star, vec3 min, vec3 max) {
         return;
     }
     int idx = octant_index(min, max, sim.x[star]);
-    while (oct->children[idx]) {
+    while (oct->children[idx] >= 0) {
         update_com(oct, sim.m[star], sim.x[star]); 
         descend_minmax(min, max, idx);
-        oct = oct->children[idx];
+        oct = &octants[oct->children[idx]];
         idx = octant_index(min, max, sim.x[star]);
     }
     if (is_leaf(oct)) {
@@ -122,7 +131,7 @@ static void octant_insert(struct octant *oct, int star, vec3 min, vec3 max) {
         int pidx = octant_index(min, max, px);
         while (idx == pidx) {
             oct->children[idx] = create_octant(cm, cx);
-            oct = oct->children[idx];
+            oct = &octants[oct->children[idx]];
             descend_minmax(min, max, idx);
             idx = octant_index(min, max, sim.x[star]);
             pidx = octant_index(min, max, px);
@@ -145,24 +154,36 @@ static void calc_acc(struct octant *o, int s, float d) {
         add_acc(o, s);
     } else {
         float r2 = glm_vec3_distance2(sim.x[s], o->com);
-        if (d * d < r2 * 2.25f) {
+        if (d * d < r2) {
             add_acc(o, s);
         } else {
             for (int i = 0; i < 8; i++) {
-                if (o->children[i])
-                    calc_acc(o->children[i], s, d / 2.0f);
+                if (o->children[i] >= 0) {
+                    calc_acc(&octants[o->children[i]], s, d / 2.0f);
+                }
             }
         }
     }
 }
 
-static void octant_destroy(struct octant *o) {
-    for (int i = 0; i < 8; i++) {
-        if (o->children[i]) {
-            octant_destroy(o->children[i]);
-            free(o->children[i]);
-        }
+struct step {
+    float sim_size;
+    struct octant *root;
+    int star0;
+    int star1;
+};
+
+static void *update_acc(void *arg) {
+    struct step *step = arg;
+    struct octant *root = step->root;
+    float sim_size = step->sim_size;
+    int i = step->star0;
+    int n = step->star1;
+    for (; i < n; i++) {
+        glm_vec3_zero(sim.a[i]);
+        calc_acc(root, i, sim_size);
     }
+    return NULL;
 }
 
 void step_sim(void) {
@@ -174,19 +195,37 @@ void step_sim(void) {
             sim_max = fmaxf(sim_max, sim.x[i][j] + sim.r[i]);
         }
     }
-    struct octant root = {}; 
+    next_octant = 0;
+    max_octant = sim.n * 2;
+    octants = xmalloc(max_octant * sizeof(*octants));
+    int root_idx = create_octant(0.0f, (vec3) {0.0f, 0.0f, 0.0f});
+    struct octant *root = &octants[root_idx];
     for (int i = 0; i < sim.n; i++) {
         vec3 min = {sim_min, sim_min, sim_min};
         vec3 max = {sim_max, sim_max, sim_max};
-        octant_insert(&root, i, min, max);
+        octant_insert(root, i, min, max);
     }
-    for (int i = 0; i < sim.n; i++) {
-        glm_vec3_zero(sim.a[i]);
-        calc_acc(&root, i, sim_max - sim_min);
+    int n_thrds = 12;
+    pthread_t thrds[n_thrds];
+    struct step steps[n_thrds];
+    for (int i = 0; i < n_thrds; i++) {
+        steps[i].sim_size = sim_max - sim_min;
+        steps[i].star0 = sim.n * i / n_thrds;
+        steps[i].star1 = sim.n * (i + 1) / n_thrds;
+        steps[i].root = root;
+        int err = pthread_create(&thrds[i], NULL, update_acc, &steps[i]);
+        if (err)
+            die("pthread_create: %s: %d\n", strerror(err), err);
     }
+    for (int i = 0; i < n_thrds; i++) {
+        pthread_join(thrds[i], NULL);
+    }
+    free(octants);
+    next_octant = 0;
+    max_octant = 0;
+    octants = NULL;
     for (int i = 0; i < sim.n; i++) {
         glm_vec3_muladds(sim.a[i], sim.h, sim.v[i]);
         glm_vec3_muladds(sim.v[i], sim.h, sim.x[i]);
     }
-    octant_destroy(&root);
 }

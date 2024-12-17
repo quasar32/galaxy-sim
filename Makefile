@@ -10,7 +10,7 @@ bin/vid: bin obj $(VID_OBJ)
 		-lavcodec -lavformat -lavutil -lx264 
 
 bin/wnd: bin obj $(WND_OBJ)
-	gcc $(WND_OBJ) -lm -lSDL2main -lSDL2 -o $@ 
+	gcc $(WND_OBJ) -lm -lSDL2main -lSDL2 -o $@
 
 obj/vid.o: src/vid.c src/sim.h src/draw.h src/misc.h
 	gcc $< -o $@ -Ilib/cglm/include -Ilib/glad/include -c
@@ -20,7 +20,6 @@ obj/test.o: src/test.c src/sim.h
 
 obj/sim.o: src/sim.c src/sim.h src/misc.h
 	gcc $< -o $@ -Ilib/cglm/include -c -O3 -fno-strict-aliasing -Wall -Wextra
-
 
 obj/misc.o: src/misc.c src/misc.h
 	gcc $< -o $@ -c

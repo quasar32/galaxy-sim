@@ -157,7 +157,7 @@ void draw(int w, int h, vec3 eye, vec3 front) {
             for (int j = 0; j < 3; j++)
                 mv[i][j] = (i == j);
         }
-        glm_scale_uni(mv, sim.r[i]);
+        glm_scale_uni(mv, sim.r[i] * 2.0f);
         for (int j = 0; j < 6; j++, k++) {
             glm_vec4(rect[j].xyz, 1.0f, poss[k]);
             glm_mat4_mulv(mv, poss[k], poss[k]);
