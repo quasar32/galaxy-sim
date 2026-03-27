@@ -6,11 +6,11 @@ bin/test: bin obj $(TEST_OBJ)
 	gcc $(TEST_OBJ) -lm -o $@ 
 
 bin/vid: bin obj $(VID_OBJ) 
-	gcc $(VID_OBJ) -o $@ -lSDL2main -lSDL2 -lm -lswscale \
+	gcc $(VID_OBJ) -o $@ -lSDL3 -lm -lswscale \
 		-lavcodec -lavformat -lavutil -lx264 
 
 bin/wnd: bin obj $(WND_OBJ)
-	gcc $(WND_OBJ) -lm -lSDL2main -lSDL2 -o $@
+	gcc $(WND_OBJ) -lm -lSDL3 -O3 -o $@
 
 obj/vid.o: src/vid.c src/sim.h src/draw.h src/misc.h
 	gcc $< -o $@ -Ilib/cglm/include -Ilib/glad/include -c

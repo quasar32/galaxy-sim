@@ -55,7 +55,7 @@ static GLuint gen_shader(GLenum type, const char *path) {
     return shader;
 }
 
-static void sdl2_die(const char *func) {
+static void sdl3_die(const char *func) {
     printf("%s(): %s\n", func, SDL_GetError());
     exit(EXIT_FAILURE);
 }
@@ -66,23 +66,21 @@ static void std_die(const char *func) {
 }
 
 static void init_sdl(int width, int height) {
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
-        sdl2_die("SDL_Init");
+    if (!SDL_Init(SDL_INIT_VIDEO))
+        sdl3_die("SDL_Init");
     if (atexit(SDL_Quit))
         std_die("atexit");
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 
                     SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    wnd = SDL_CreateWindow("Many Objects",
-            SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-            width, height, SDL_WINDOW_OPENGL);
+    wnd = SDL_CreateWindow("Many Objects", width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN);
     if (!wnd)
-        sdl2_die("SDL_CreateWindow");
+        sdl3_die("SDL_CreateWindow");
     if (!SDL_GL_CreateContext(wnd))
-        sdl2_die("SDL_GL_CreateContext");
+        sdl3_die("SDL_GL_CreateContext");
     if (gladLoadGL((GLADloadfunc) SDL_GL_GetProcAddress) == 0)
-        sdl2_die("SDL_GL_GetProcAddress");
+        sdl3_die("SDL_GL_GetProcAddress");
 }
 
 static void init_prog(void) {

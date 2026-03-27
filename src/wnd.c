@@ -9,14 +9,14 @@ static vec3 front;
 static vec3 right;
 static float yaw = -GLM_PI_2f;
 static float pitch = 0.0f;
-static const Uint8 *keys;
+static const bool *keys;
 static int n_keys;
 
 #define MAX_PITCH (GLM_PI_2f - 0.01F)
 #define MIN_PITCH (-MAX_PITCH)
 
 static void update_rots(void) {
-    int x, y;
+    float x, y;
     SDL_GetRelativeMouseState(&x, &y);
     yaw += x * 0.001f;
     pitch -= y * 0.001f;
@@ -43,6 +43,17 @@ static void update_eye(void) {
         glm_vec3_muladds(right, 0.1f, eye);
 }
 
+static bool process_messages(void) {
+	SDL_Event ev;
+	while (SDL_PollEvent(&ev)) {
+		if (ev.type == SDL_EVENT_QUIT) {
+			return false;
+		}
+	}
+	SDL_PumpEvents();
+	return !keys[SDL_SCANCODE_ESCAPE];
+}
+
 int main(void) {
     init_draw(640, 480);
     init_sim();
@@ -53,17 +64,20 @@ int main(void) {
     Uint64 t0 = SDL_GetPerformanceCounter();
     Uint64 acc = 0;
     SDL_ShowWindow(wnd);
-    SDL_SetRelativeMouseMode(GL_TRUE);
     keys = SDL_GetKeyboardState(&n_keys);
-    while (!SDL_QuitRequested()) {
+    while (process_messages()) {
         int w0, h0;
         SDL_GetWindowSizeInPixels(wnd, &w0, &h0);
         if (w != w0 && h != h0) {
             w = w0;
             h = h0;
             glViewport(0, 0, w, h);
+            SDL_SetWindowRelativeMouseMode(wnd, false);
         }
         draw(w, h, eye, front);
+        update_rots();
+        update_dirs();
+        SDL_SetWindowRelativeMouseMode(wnd, true);
         SDL_GL_SwapWindow(wnd);
         Uint64 t1 = SDL_GetPerformanceCounter();
         acc += t1 - t0;
@@ -72,9 +86,6 @@ int main(void) {
             acc = freq / 10;
         while (acc >= frame) {
             acc -= frame;
-            SDL_PumpEvents();
-            update_rots();
-            update_dirs();
             update_eye();
             step_sim();
         }
